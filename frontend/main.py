@@ -105,6 +105,7 @@ class MainPage(QtWidgets.QWidget):
         self._clues = []
         self._revealed_clues = {}
         self._current_vote = None
+        self._role_data = {}
         self._build_ui()
 
     def _build_ui(self):
@@ -126,6 +127,21 @@ class MainPage(QtWidgets.QWidget):
         self.players_list = QtWidgets.QListWidget()
         self.players_list.setMinimumWidth(220)
         left_layout.addWidget(self.players_list)
+
+        role_group = QtWidgets.QGroupBox("Your role")
+        role_layout = QtWidgets.QVBoxLayout(role_group)
+        self.role_name_label = QtWidgets.QLabel("Role: -")
+        self.view_role_button = QtWidgets.QPushButton("View role script")
+        self.view_role_button.clicked.connect(self._on_view_role)
+        role_layout.addWidget(self.role_name_label)
+        role_layout.addWidget(self.view_role_button)
+        left_layout.addWidget(role_group)
+
+        intro_group = QtWidgets.QGroupBox("Role introductions")
+        intro_layout = QtWidgets.QVBoxLayout(intro_group)
+        self.role_intro_list = QtWidgets.QListWidget()
+        intro_layout.addWidget(self.role_intro_list)
+        left_layout.addWidget(intro_group)
 
         name_group = QtWidgets.QGroupBox("Player")
         name_layout = QtWidgets.QFormLayout(name_group)
@@ -249,6 +265,7 @@ class MainPage(QtWidgets.QWidget):
             self.players_list.addItem(f"{name}{role_text}{host_flag} - {status}")
         self._update_name_from_players(players)
         self._update_phase_view(phase)
+        self._update_role_intros(state.get("role_intros", []))
         self._update_clues(state.get("clues", []), state.get("revealed_clues", []))
         self._update_votes(state.get("votes"), players)
         self._update_result(state.get("result"), players)
@@ -261,9 +278,33 @@ class MainPage(QtWidgets.QWidget):
             self.script_combo.addItem(title, script_id)
 
     def show_role(self, role):
+        self._role_data = dict(role)
+        self.role_name_label.setText(f"Role: {role.get('name', '-')}")
         self.role_title.setText(f"Role: {role.get('name', '-')}")
         self.role_intro.setText(role.get("intro", ""))
         self.role_story.setPlainText(role.get("story", ""))
+
+    def _on_view_role(self):
+        if not self._role_data:
+            QtWidgets.QMessageBox.information(self, "Role", "No role assigned yet.")
+            return
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle("Your role")
+        dialog.resize(500, 400)
+        layout = QtWidgets.QVBoxLayout(dialog)
+        title = QtWidgets.QLabel(self._role_data.get("name", ""))
+        intro = QtWidgets.QLabel(self._role_data.get("intro", ""))
+        intro.setWordWrap(True)
+        story = QtWidgets.QTextEdit()
+        story.setReadOnly(True)
+        story.setPlainText(self._role_data.get("story", ""))
+        close_button = QtWidgets.QPushButton("Close")
+        close_button.clicked.connect(dialog.accept)
+        layout.addWidget(title)
+        layout.addWidget(intro)
+        layout.addWidget(story)
+        layout.addWidget(close_button)
+        dialog.exec_()
 
     def _on_select_script(self):
         script_id = self.script_combo.currentData()
@@ -324,6 +365,14 @@ class MainPage(QtWidgets.QWidget):
         can_rename = phase in ("Idle", "Configuring")
         self.name_input.setEnabled(can_rename)
         self.name_button.setEnabled(can_rename)
+
+    def _update_role_intros(self, role_intros):
+        self.role_intro_list.clear()
+        for role in role_intros:
+            name = role.get("name") or f"Role {role.get('id', '')}".strip()
+            intro = role.get("intro", "")
+            text = f"{name}: {intro}".strip()
+            self.role_intro_list.addItem(text)
 
     def _update_clues(self, clues, revealed_clues):
         self._clues = clues

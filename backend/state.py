@@ -123,8 +123,7 @@ class GameRoom:
             for index, player in enumerate(connected_players[: self._player_count]):
                 role = roles[index]
                 player["role_id"] = role.get("id")
-                role_payload = dict(role)
-                role_payload["name"] = player.get("display_name", role.get("name", ""))
+                role_payload = self._build_role_payload(role, player.get("display_name", ""))
                 assigned[player["player_id"]] = role_payload
             self._phase = "Reading"
             return assigned, None
@@ -197,6 +196,7 @@ class GameRoom:
                 }
             clues = self._build_clue_overview(script) if script else []
             revealed_clues = list(self._revealed_clues.values())
+            role_intros = self._build_role_intros(script) if script else []
             votes = None
             if self._phase in ("Voting", "ResultReview", "Archived"):
                 votes = self._build_vote_summary()
@@ -206,6 +206,7 @@ class GameRoom:
                 "player_count": self._player_count,
                 "players": list(self._players.values()),
                 "script": script_info,
+                "role_intros": role_intros,
                 "clues": clues,
                 "revealed_clues": revealed_clues,
                 "votes": votes,
@@ -264,3 +265,31 @@ class GameRoom:
             "events": script.get("events", []),
             "votes": self._build_vote_summary(),
         }
+
+    def _build_role_payload(self, role, display_name):
+        role_payload = dict(role)
+        original_name = role_payload.get("name", "")
+        role_payload["name"] = display_name or original_name
+        role_payload["intro"] = self._replace_role_name(
+            role_payload.get("intro", ""), original_name, role_payload["name"]
+        )
+        role_payload["story"] = self._replace_role_name(
+            role_payload.get("story", ""), original_name, role_payload["name"]
+        )
+        return role_payload
+
+    def _replace_role_name(self, text, original_name, display_name):
+        if not text or not original_name or not display_name:
+            return text
+        return text.replace(original_name, display_name)
+
+    def _build_role_intros(self, script):
+        roles = script.get("roles", []) if script else []
+        output = []
+        for role in roles:
+            output.append({
+                "id": role.get("id"),
+                "name": role.get("name", ""),
+                "intro": role.get("intro", ""),
+            })
+        return output
