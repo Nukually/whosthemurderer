@@ -82,9 +82,13 @@ class GameRoom:
 
     def set_name(self, player_id, display_name):
         with self._lock:
+            if self._phase not in ("Idle", "Configuring"):
+                return False, "Name changes are locked after the game starts"
             player = self._players.get(player_id)
             if player and display_name:
                 player["display_name"] = display_name
+                return True, None
+            return False, "Invalid player name"
 
     def set_player_count(self, player_count):
         with self._lock:
@@ -119,7 +123,9 @@ class GameRoom:
             for index, player in enumerate(connected_players[: self._player_count]):
                 role = roles[index]
                 player["role_id"] = role.get("id")
-                assigned[player["player_id"]] = role
+                role_payload = dict(role)
+                role_payload["name"] = player.get("display_name", role.get("name", ""))
+                assigned[player["player_id"]] = role_payload
             self._phase = "Reading"
             return assigned, None
 
@@ -228,7 +234,8 @@ class GameRoom:
         ]
         counts = {}
         for target_id in self._votes.values():
-            counts[target_id] = counts.get(target_id, 0) + 1
+            key = str(target_id)
+            counts[key] = counts.get(key, 0) + 1
         return {
             "submitted": len(self._votes),
             "eligible": len(connected_players),

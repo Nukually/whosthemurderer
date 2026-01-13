@@ -90,7 +90,13 @@ class GameServer:
             return
 
         if message_type == "set_name":
-            self._room.set_name(handler.player_id, message.get("display_name", ""))
+            ok, error = self._room.set_name(
+                handler.player_id,
+                message.get("display_name", ""),
+            )
+            if not ok:
+                handler.send({"type": "error", "message": error})
+                return
             self.broadcast_state()
             return
 

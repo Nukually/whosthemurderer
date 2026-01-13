@@ -321,6 +321,9 @@ class MainPage(QtWidgets.QWidget):
         elif phase in ("ResultReview", "Archived"):
             phase_index = 3
         self.phase_stack.setCurrentIndex(phase_index)
+        can_rename = phase in ("Idle", "Configuring")
+        self.name_input.setEnabled(can_rename)
+        self.name_button.setEnabled(can_rename)
 
     def _update_clues(self, clues, revealed_clues):
         self._clues = clues
@@ -380,7 +383,8 @@ class MainPage(QtWidgets.QWidget):
             self.vote_results.clear()
             for player in players:
                 name = player.get("display_name") or "Player"
-                count = counts.get(player.get("player_id"), 0)
+                player_key = str(player.get("player_id"))
+                count = counts.get(player_key, counts.get(player.get("player_id"), 0))
                 self.vote_results.addItem(f"{name}: {count}")
         else:
             self.vote_status.setText("Votes: -")
@@ -404,7 +408,8 @@ class MainPage(QtWidgets.QWidget):
         counts = vote_summary.get("counts", {})
         for player in players:
             name = player.get("display_name") or "Player"
-            count = counts.get(player.get("player_id"), 0)
+            player_key = str(player.get("player_id"))
+            count = counts.get(player_key, counts.get(player.get("player_id"), 0))
             self.result_votes.addItem(f"{name}: {count}")
 
 
