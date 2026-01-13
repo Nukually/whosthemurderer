@@ -196,17 +196,17 @@ class GameRoom:
                 }
             clues = self._build_clue_overview(script) if script else []
             revealed_clues = list(self._revealed_clues.values())
-            role_intros = self._build_role_intros(script) if script else []
+            role_cards = self._build_role_cards(script)
             votes = None
             if self._phase in ("Voting", "ResultReview", "Archived"):
-                votes = self._build_vote_summary()
+                votes = self._build_vote_summary(include_counts=self._phase != "Voting")
             result = self._result if self._phase in ("ResultReview", "Archived") else None
             return {
                 "phase": self._phase,
                 "player_count": self._player_count,
-                "players": list(self._players.values()),
+                "players": self._serialize_players(),
                 "script": script_info,
-                "role_intros": role_intros,
+                "role_cards": role_cards,
                 "clues": clues,
                 "revealed_clues": revealed_clues,
                 "votes": votes,
@@ -229,19 +229,33 @@ class GameRoom:
         for player in self._players.values():
             player["current_vote"] = None
 
-    def _build_vote_summary(self):
+    def _serialize_players(self):
+        output = []
+        for player in self._players.values():
+            output.append({
+                "player_id": player.get("player_id"),
+                "display_name": player.get("display_name"),
+                "role_id": player.get("role_id"),
+                "is_host": player.get("is_host"),
+                "connected": player.get("connected"),
+            })
+        return output
+
+    def _build_vote_summary(self, include_counts=True):
         connected_players = [
             player for player in self._players.values() if player["connected"]
         ]
-        counts = {}
-        for target_id in self._votes.values():
-            key = str(target_id)
-            counts[key] = counts.get(key, 0) + 1
-        return {
+        summary = {
             "submitted": len(self._votes),
             "eligible": len(connected_players),
-            "counts": counts,
         }
+        if include_counts:
+            counts = {}
+            for target_id in self._votes.values():
+                key = str(target_id)
+                counts[key] = counts.get(key, 0) + 1
+            summary["counts"] = counts
+        return summary
 
     def _build_clue_overview(self, script):
         revealed = set(self._revealed_clues.keys())
@@ -263,12 +277,13 @@ class GameRoom:
         return {
             "truth": script.get("truth", ""),
             "events": script.get("events", []),
-            "votes": self._build_vote_summary(),
+            "votes": self._build_vote_summary(include_counts=True),
         }
 
     def _build_role_payload(self, role, display_name):
         role_payload = dict(role)
         original_name = role_payload.get("name", "")
+        role_payload["role_name"] = original_name
         role_payload["name"] = display_name or original_name
         role_payload["intro"] = self._replace_role_name(
             role_payload.get("intro", ""), original_name, role_payload["name"]
@@ -283,13 +298,24 @@ class GameRoom:
             return text
         return text.replace(original_name, display_name)
 
-    def _build_role_intros(self, script):
+    def _build_role_cards(self, script):
         roles = script.get("roles", []) if script else []
+        roles_by_id = {role.get("id"): role for role in roles}
         output = []
-        for role in roles:
+        for player in self._players.values():
+            role_id = player.get("role_id")
+            role = roles_by_id.get(role_id, {}) if role_id is not None else {}
+            original_name = role.get("name", "")
+            display_name = player.get("display_name", "")
+            intro = role.get("intro", "")
+            intro = self._replace_role_name(intro, original_name, display_name)
             output.append({
-                "id": role.get("id"),
-                "name": role.get("name", ""),
-                "intro": role.get("intro", ""),
+                "player_id": player.get("player_id"),
+                "display_name": display_name,
+                "role_id": role_id,
+                "role_name": original_name,
+                "role_intro": intro,
+                "connected": player.get("connected"),
+                "is_host": player.get("is_host"),
             })
         return output

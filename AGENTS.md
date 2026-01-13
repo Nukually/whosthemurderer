@@ -35,6 +35,7 @@
 - No commit history or conventions are available in this repository.
 - Until a standard is defined, use clear, imperative commit messages (for example, "Add room creation flow").
 - Pull requests should describe scope, link any related issues, and include screenshots for UI changes.
+- Reminder: after making changes, always push to the remote branch.
 
 ## Scope Notes (From PRD)
 - The product focuses on a desktop (Windows) experience rather than web deployment.

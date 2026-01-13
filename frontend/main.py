@@ -2,7 +2,7 @@ import os
 import socket
 import sys
 
-from PyQt5 import QtCore, QtWidgets
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 from backend.server import GameServer, DEFAULT_HOST, DEFAULT_PORT
 from frontend.client_network import NetworkClient
@@ -38,8 +38,17 @@ class StartPage(QtWidgets.QWidget):
     def _build_ui(self):
         layout = QtWidgets.QVBoxLayout(self)
         layout.setSpacing(20)
+        layout.setContentsMargins(40, 30, 40, 40)
+
+        title = QtWidgets.QLabel("Who Sthe Murder")
+        title.setObjectName("AppTitle")
+        subtitle = QtWidgets.QLabel("LAN mystery game · Host or join a room")
+        subtitle.setObjectName("AppSubtitle")
+        layout.addWidget(title)
+        layout.addWidget(subtitle)
 
         host_group = QtWidgets.QGroupBox("Host (start server)")
+        host_group.setProperty("card", "primary")
         host_layout = QtWidgets.QFormLayout(host_group)
         self.host_ip_label = QtWidgets.QLabel(get_local_ip())
         self.host_name_input = QtWidgets.QLineEdit()
@@ -55,6 +64,7 @@ class StartPage(QtWidgets.QWidget):
         host_layout.addRow(host_button)
 
         client_group = QtWidgets.QGroupBox("Client (connect to host)")
+        client_group.setProperty("card", "primary")
         client_layout = QtWidgets.QFormLayout(client_group)
         self.client_name_input = QtWidgets.QLineEdit()
         self.client_name_input.setPlaceholderText("Player name")
@@ -71,8 +81,11 @@ class StartPage(QtWidgets.QWidget):
         client_layout.addRow("Port", self.client_port_input)
         client_layout.addRow(client_button)
 
-        layout.addWidget(host_group)
-        layout.addWidget(client_group)
+        cards_layout = QtWidgets.QHBoxLayout()
+        cards_layout.setSpacing(20)
+        cards_layout.addWidget(host_group, 1)
+        cards_layout.addWidget(client_group, 1)
+        layout.addLayout(cards_layout)
         layout.addStretch(1)
 
     def _on_host_clicked(self):
@@ -106,13 +119,19 @@ class MainPage(QtWidgets.QWidget):
         self._revealed_clues = {}
         self._current_vote = None
         self._role_data = {}
+        self._role_cards = {}
+        self._current_phase = "Idle"
         self._build_ui()
 
     def _build_ui(self):
         layout = QtWidgets.QVBoxLayout(self)
-        layout.setSpacing(10)
+        layout.setSpacing(12)
+        layout.setContentsMargins(24, 20, 24, 24)
 
-        status_layout = QtWidgets.QHBoxLayout()
+        status_frame = QtWidgets.QFrame()
+        status_frame.setProperty("panel", "status")
+        status_layout = QtWidgets.QHBoxLayout(status_frame)
+        status_layout.setContentsMargins(16, 12, 16, 12)
         self.phase_label = QtWidgets.QLabel("Phase: Idle")
         self.script_label = QtWidgets.QLabel("Script: -")
         self.count_label = QtWidgets.QLabel("Players: 0")
@@ -120,30 +139,45 @@ class MainPage(QtWidgets.QWidget):
         status_layout.addWidget(self.script_label)
         status_layout.addWidget(self.count_label)
         status_layout.addStretch(1)
-        layout.addLayout(status_layout)
+        layout.addWidget(status_frame)
 
         body_layout = QtWidgets.QHBoxLayout()
+        body_layout.setSpacing(16)
         left_layout = QtWidgets.QVBoxLayout()
+        left_layout.setSpacing(12)
+
+        players_group = QtWidgets.QGroupBox("Players")
+        players_group.setProperty("card", "primary")
+        players_layout = QtWidgets.QVBoxLayout(players_group)
         self.players_list = QtWidgets.QListWidget()
-        self.players_list.setMinimumWidth(220)
-        left_layout.addWidget(self.players_list)
+        self.players_list.setMinimumWidth(260)
+        self.players_list.setAlternatingRowColors(True)
+        players_layout.addWidget(self.players_list)
+        left_layout.addWidget(players_group)
 
         role_group = QtWidgets.QGroupBox("Your role")
+        role_group.setProperty("card", "secondary")
         role_layout = QtWidgets.QVBoxLayout(role_group)
-        self.role_name_label = QtWidgets.QLabel("Role: -")
+        self.role_name_label = QtWidgets.QLabel("Name: -")
+        self.role_identity_label = QtWidgets.QLabel("Identity: -")
         self.view_role_button = QtWidgets.QPushButton("View role script")
         self.view_role_button.clicked.connect(self._on_view_role)
         role_layout.addWidget(self.role_name_label)
+        role_layout.addWidget(self.role_identity_label)
         role_layout.addWidget(self.view_role_button)
         left_layout.addWidget(role_group)
 
-        intro_group = QtWidgets.QGroupBox("Role introductions")
+        intro_group = QtWidgets.QGroupBox("Identity cards")
+        intro_group.setProperty("card", "primary")
         intro_layout = QtWidgets.QVBoxLayout(intro_group)
         self.role_intro_list = QtWidgets.QListWidget()
+        self.role_intro_list.setWordWrap(True)
+        self.role_intro_list.setUniformItemSizes(False)
         intro_layout.addWidget(self.role_intro_list)
         left_layout.addWidget(intro_group)
 
         name_group = QtWidgets.QGroupBox("Player")
+        name_group.setProperty("card", "secondary")
         name_layout = QtWidgets.QFormLayout(name_group)
         self.name_input = QtWidgets.QLineEdit()
         self.name_input.setPlaceholderText("Your name")
@@ -162,6 +196,7 @@ class MainPage(QtWidgets.QWidget):
         role_layout = QtWidgets.QVBoxLayout(reading_page)
         self.role_title = QtWidgets.QLabel("Role: -")
         self.role_intro = QtWidgets.QLabel("")
+        self.role_intro.setWordWrap(True)
         self.role_story = QtWidgets.QTextEdit()
         self.role_story.setReadOnly(True)
         role_layout.addWidget(self.role_title)
@@ -195,6 +230,7 @@ class MainPage(QtWidgets.QWidget):
         vote_list_layout.addWidget(self.vote_button)
         vote_list_layout.addWidget(self.vote_status)
         self.vote_results = QtWidgets.QListWidget()
+        self.vote_results.setVisible(False)
         voting_layout.addLayout(vote_list_layout)
         voting_layout.addWidget(self.vote_results)
         self.phase_stack.addWidget(voting_page)
@@ -213,10 +249,15 @@ class MainPage(QtWidgets.QWidget):
         result_layout.addWidget(self.result_votes)
         self.phase_stack.addWidget(result_page)
 
-        body_layout.addWidget(self.phase_stack)
+        phase_group = QtWidgets.QGroupBox("Live view")
+        phase_group.setProperty("card", "primary")
+        phase_layout = QtWidgets.QVBoxLayout(phase_group)
+        phase_layout.addWidget(self.phase_stack)
+        body_layout.addWidget(phase_group, 1)
         layout.addLayout(body_layout)
 
         self.host_controls = QtWidgets.QGroupBox("Host controls")
+        self.host_controls.setProperty("card", "primary")
         host_layout = QtWidgets.QFormLayout(self.host_controls)
         self.script_combo = QtWidgets.QComboBox()
         self.select_script_button = QtWidgets.QPushButton("Select script")
@@ -247,6 +288,7 @@ class MainPage(QtWidgets.QWidget):
 
     def update_state(self, state):
         phase = state.get("phase", "-")
+        self._current_phase = phase
         self.phase_label.setText(f"Phase: {phase}")
         script = state.get("script")
         if script:
@@ -254,18 +296,20 @@ class MainPage(QtWidgets.QWidget):
         else:
             self.script_label.setText("Script: -")
         self.count_label.setText(f"Players: {state.get('player_count', 0)}")
+        role_cards = state.get("role_cards", [])
+        self._update_role_cards(role_cards)
         players = state.get("players", [])
         self.players_list.clear()
         for player in players:
             name = player.get("display_name") or "Player"
-            role_id = player.get("role_id")
-            role_text = f" (Role {role_id})" if role_id else ""
+            role_card = self._role_cards.get(player.get("player_id"), {})
+            role_name = role_card.get("role_name") or "Unassigned"
+            role_text = f" — {role_name}" if role_name else ""
             host_flag = " [Host]" if player.get("is_host") else ""
             status = "online" if player.get("connected") else "offline"
             self.players_list.addItem(f"{name}{role_text}{host_flag} - {status}")
         self._update_name_from_players(players)
         self._update_phase_view(phase)
-        self._update_role_intros(state.get("role_intros", []))
         self._update_clues(state.get("clues", []), state.get("revealed_clues", []))
         self._update_votes(state.get("votes"), players)
         self._update_result(state.get("result"), players)
@@ -279,8 +323,11 @@ class MainPage(QtWidgets.QWidget):
 
     def show_role(self, role):
         self._role_data = dict(role)
-        self.role_name_label.setText(f"Role: {role.get('name', '-')}")
-        self.role_title.setText(f"Role: {role.get('name', '-')}")
+        display_name = role.get("name", "-")
+        role_name = role.get("role_name", "-")
+        self.role_name_label.setText(f"Name: {display_name}")
+        self.role_identity_label.setText(f"Identity: {role_name}")
+        self.role_title.setText(f"{role_name} · {display_name}")
         self.role_intro.setText(role.get("intro", ""))
         self.role_story.setPlainText(role.get("story", ""))
 
@@ -292,7 +339,9 @@ class MainPage(QtWidgets.QWidget):
         dialog.setWindowTitle("Your role")
         dialog.resize(500, 400)
         layout = QtWidgets.QVBoxLayout(dialog)
-        title = QtWidgets.QLabel(self._role_data.get("name", ""))
+        display_name = self._role_data.get("name", "")
+        role_name = self._role_data.get("role_name", "")
+        title = QtWidgets.QLabel(f"{role_name} · {display_name}".strip(" ·"))
         intro = QtWidgets.QLabel(self._role_data.get("intro", ""))
         intro.setWordWrap(True)
         story = QtWidgets.QTextEdit()
@@ -304,6 +353,7 @@ class MainPage(QtWidgets.QWidget):
         layout.addWidget(intro)
         layout.addWidget(story)
         layout.addWidget(close_button)
+        self._fade_in_dialog(dialog)
         dialog.exec_()
 
     def _on_select_script(self):
@@ -341,6 +391,7 @@ class MainPage(QtWidgets.QWidget):
         target_id = item.data(QtCore.Qt.UserRole)
         if target_id is None:
             return
+        self._current_vote = int(target_id)
         self.submit_vote.emit(int(target_id))
 
     def _update_name_from_players(self, players):
@@ -348,7 +399,8 @@ class MainPage(QtWidgets.QWidget):
             return
         for player in players:
             if player.get("player_id") == self._player_id:
-                self._current_vote = player.get("current_vote")
+                if "current_vote" in player:
+                    self._current_vote = player.get("current_vote")
                 if not self._name_dirty:
                     self.name_input.setText(player.get("display_name", ""))
                 break
@@ -366,13 +418,20 @@ class MainPage(QtWidgets.QWidget):
         self.name_input.setEnabled(can_rename)
         self.name_button.setEnabled(can_rename)
 
-    def _update_role_intros(self, role_intros):
+    def _update_role_cards(self, role_cards):
+        self._role_cards = {
+            card.get("player_id"): card for card in role_cards if card.get("player_id") is not None
+        }
         self.role_intro_list.clear()
-        for role in role_intros:
-            name = role.get("name") or f"Role {role.get('id', '')}".strip()
-            intro = role.get("intro", "")
-            text = f"{name}: {intro}".strip()
-            self.role_intro_list.addItem(text)
+        for card in role_cards:
+            display_name = card.get("display_name") or "Player"
+            role_name = card.get("role_name") or "Unassigned"
+            intro = card.get("role_intro", "")
+            text = f"{display_name} — {role_name}"
+            if intro:
+                text = f"{text}\n{intro}"
+            item = QtWidgets.QListWidgetItem(text)
+            self.role_intro_list.addItem(item)
 
     def _update_clues(self, clues, revealed_clues):
         self._clues = clues
@@ -428,16 +487,20 @@ class MainPage(QtWidgets.QWidget):
             submitted = vote_summary.get("submitted", 0)
             eligible = vote_summary.get("eligible", 0)
             self.vote_status.setText(f"Votes: {submitted}/{eligible}")
-            counts = vote_summary.get("counts", {})
+            counts = vote_summary.get("counts")
+            show_results = counts is not None and self._current_phase != "Voting"
+            self.vote_results.setVisible(show_results)
             self.vote_results.clear()
-            for player in players:
-                name = player.get("display_name") or "Player"
-                player_key = str(player.get("player_id"))
-                count = counts.get(player_key, counts.get(player.get("player_id"), 0))
-                self.vote_results.addItem(f"{name}: {count}")
+            if show_results:
+                for player in players:
+                    name = player.get("display_name") or "Player"
+                    player_key = str(player.get("player_id"))
+                    count = counts.get(player_key, counts.get(player.get("player_id"), 0))
+                    self.vote_results.addItem(f"{name}: {count}")
         else:
             self.vote_status.setText("Votes: -")
             self.vote_results.clear()
+            self.vote_results.setVisible(False)
 
     def _update_result(self, result, players):
         if not result:
@@ -461,17 +524,29 @@ class MainPage(QtWidgets.QWidget):
             count = counts.get(player_key, counts.get(player.get("player_id"), 0))
             self.result_votes.addItem(f"{name}: {count}")
 
+    def _fade_in_dialog(self, dialog):
+        dialog.setWindowOpacity(0.0)
+        animation = QtCore.QPropertyAnimation(dialog, b"windowOpacity", dialog)
+        animation.setDuration(220)
+        animation.setStartValue(0.0)
+        animation.setEndValue(1.0)
+        animation.setEasingCurve(QtCore.QEasingCurve.OutCubic)
+        dialog._fade_anim = animation
+        animation.start()
+
 
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Who Sthe Murder MVP")
-        self.resize(900, 600)
+        self.resize(1000, 700)
         self._server = None
         self._client = NetworkClient()
         self._is_host = False
         self._player_id = None
+        self._animations = []
         self._build_ui()
+        self._apply_theme()
         self._connect_signals()
 
     def _build_ui(self):
@@ -482,6 +557,121 @@ class MainWindow(QtWidgets.QMainWindow):
         self.stack.addWidget(self.main_page)
         self.setCentralWidget(self.stack)
         self.stack.setCurrentWidget(self.start_page)
+
+    def _apply_theme(self):
+        app_font = QtGui.QFont("Bahnschrift", 10)
+        self.setFont(app_font)
+        self.setStyleSheet(
+            """
+            QMainWindow {
+                background: qlineargradient(
+                    x1: 0, y1: 0, x2: 1, y2: 1,
+                    stop: 0 #f7f2ea, stop: 1 #e6eef5
+                );
+            }
+            QWidget {
+                color: #1c2a33;
+                font-family: "Bahnschrift";
+                font-size: 10.5pt;
+            }
+            QLabel#AppTitle {
+                font-size: 28pt;
+                font-weight: 600;
+                color: #0f2533;
+            }
+            QLabel#AppSubtitle {
+                font-size: 12pt;
+                color: #3f5a66;
+            }
+            QFrame[panel="status"] {
+                background: rgba(255, 255, 255, 0.8);
+                border: 1px solid #d7e0e8;
+                border-radius: 16px;
+            }
+            QGroupBox {
+                border: 1px solid #d7e0e8;
+                border-radius: 16px;
+                margin-top: 14px;
+                background: rgba(255, 255, 255, 0.85);
+            }
+            QGroupBox[card="secondary"] {
+                background: rgba(244, 248, 250, 0.9);
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 16px;
+                padding: 4px 10px;
+                background: #eef4f7;
+                border-radius: 10px;
+                color: #314954;
+            }
+            QLineEdit, QSpinBox, QComboBox, QTextEdit, QListWidget {
+                background: #f8fbfd;
+                border: 1px solid #d7e0e8;
+                border-radius: 10px;
+                padding: 6px 10px;
+                selection-background-color: #a7d8ce;
+            }
+            QComboBox::drop-down {
+                border: none;
+            }
+            QListWidget::item {
+                padding: 6px 8px;
+            }
+            QListWidget::item:selected {
+                background: #d6efe8;
+                color: #13413a;
+            }
+            QPushButton {
+                background-color: #2b7c88;
+                color: #ffffff;
+                border: none;
+                border-radius: 10px;
+                padding: 8px 14px;
+                font-weight: 600;
+            }
+            QPushButton:hover {
+                background-color: #256b76;
+            }
+            QPushButton:pressed {
+                background-color: #1f5b64;
+            }
+            QScrollBar:vertical {
+                background: transparent;
+                width: 10px;
+                margin: 2px;
+            }
+            QScrollBar::handle:vertical {
+                background: #c6d6df;
+                border-radius: 5px;
+            }
+            QScrollBar::add-line:vertical,
+            QScrollBar::sub-line:vertical {
+                height: 0px;
+            }
+            QStackedWidget {
+                background: transparent;
+            }
+            """
+        )
+
+    def _fade_in(self, widget):
+        effect = QtWidgets.QGraphicsOpacityEffect(widget)
+        widget.setGraphicsEffect(effect)
+        animation = QtCore.QPropertyAnimation(effect, b"opacity", widget)
+        animation.setDuration(320)
+        animation.setStartValue(0.0)
+        animation.setEndValue(1.0)
+        animation.setEasingCurve(QtCore.QEasingCurve.OutCubic)
+
+        def _cleanup():
+            widget.setGraphicsEffect(None)
+            if animation in self._animations:
+                self._animations.remove(animation)
+
+        animation.finished.connect(_cleanup)
+        self._animations.append(animation)
+        animation.start()
 
     def _connect_signals(self):
         self.start_page.host_requested.connect(self._start_host)
@@ -536,6 +726,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def _enter_main(self):
         self.main_page.set_host_mode(self._is_host)
         self.stack.setCurrentWidget(self.main_page)
+        self._fade_in(self.main_page)
 
     def _on_message(self, message):
         message_type = message.get("type")
@@ -559,6 +750,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def _on_disconnected(self):
         self._show_error("Disconnected from server. Check the host address and reconnect.")
         self.stack.setCurrentWidget(self.start_page)
+        self._fade_in(self.start_page)
 
     def _show_error(self, message):
         QtWidgets.QMessageBox.warning(self, "Notice", message)
