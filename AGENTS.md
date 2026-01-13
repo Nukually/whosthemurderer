@@ -41,3 +41,10 @@
 - The product focuses on a desktop (Windows) experience rather than web deployment.
 - No database, voice, or chat modules are required; scripts should be read from files.
 - Character selection uses numeric roles; users can rename themselves after assignment.
+
+## Recent Updates
+- Role rename now propagates to role script and identity cards.
+- Identity cards (player name + role name + intro) are visible to everyone.
+- Voting is anonymous until results are revealed.
+- UI refreshed with modern styling and role script view is always available.
+- Sample script expanded with deeper timeline and clues.
