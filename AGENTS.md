@@ -9,6 +9,18 @@
 - Install dependencies: `pip install -r requirements.txt`
 - Run the MVP client/host UI: `python -m frontend.main`
 
+## Current Development Status
+### Implemented
+- MVP networking: TCP JSON line protocol, host-only controls, manual client connect (IP/port).
+- Backend: `GameServer`, `GameRoom`, script loading, role assignment, state broadcast.
+- Frontend (PyQt5): host start, client connect, script select, player count (4-6), assign roles, role view.
+- Sample script: `data/scripts/sample-script.json`.
+
+### Next Planned
+- Add name editing flow for players (client UI + server handling).
+- Expand MVP phases beyond reading (investigation/voting/result screens).
+- Add basic error handling and reconnect hints.
+
 ## Coding Style & Naming Conventions
 - Use 2-space indentation for Vue components and 4-space indentation for Python files.
 - Favor descriptive, lowercase file names with hyphens (for example, `room-list.vue`, `game-flow.py`).
