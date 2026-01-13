@@ -25,6 +25,7 @@ class NetworkClient(QtCore.QObject):
         except OSError as exc:
             self.error.emit(str(exc))
             return False
+        sock.settimeout(None)
         self._socket = sock
         self._thread = threading.Thread(target=self._read_loop, daemon=True)
         self._thread.start()
