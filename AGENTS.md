@@ -8,8 +8,6 @@
 ## Build, Test, and Development Commands
 - Install dependencies: `pip install -r requirements.txt`
 - Run the MVP client/host UI: `python -m frontend.main`
-- Package Windows executable (one-file): `pyinstaller --onefile --name whosthemurder --add-data "data/scripts;data/scripts" -m frontend.main`
-- PyInstaller output: `dist/whosthemurder.exe`
 
 ## Coding Style & Naming Conventions
 - Use 2-space indentation for Vue components and 4-space indentation for Python files.
