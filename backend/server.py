@@ -140,6 +140,51 @@ class GameServer:
             self.broadcast_state()
             return
 
+        if message_type == "advance_phase":
+            if not self._room.is_host(handler.player_id):
+                handler.send({"type": "error", "message": "Host only"})
+                return
+            ok, error = self._room.advance_phase()
+            if not ok:
+                handler.send({"type": "error", "message": error or "Cannot advance phase"})
+                return
+            self.broadcast_state()
+            return
+
+        if message_type == "reset_game":
+            if not self._room.is_host(handler.player_id):
+                handler.send({"type": "error", "message": "Host only"})
+                return
+            self._room.reset_game()
+            self.broadcast_state()
+            return
+
+        if message_type == "request_clue":
+            clue_id = message.get("clue_id")
+            if not clue_id:
+                handler.send({"type": "error", "message": "Missing clue id"})
+                return
+            clue, error = self._room.reveal_clue(clue_id)
+            if error:
+                handler.send({"type": "error", "message": error})
+                return
+            handler.send({"type": "clue_revealed", "clue": clue})
+            self.broadcast_state()
+            return
+
+        if message_type == "submit_vote":
+            try:
+                target_id = int(message.get("target_id"))
+            except (TypeError, ValueError):
+                handler.send({"type": "error", "message": "Invalid vote target"})
+                return
+            _, error = self._room.submit_vote(handler.player_id, target_id)
+            if error:
+                handler.send({"type": "error", "message": error})
+                return
+            self.broadcast_state()
+            return
+
         if message_type == "ping":
             handler.send({"type": "pong"})
             return
